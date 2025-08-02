@@ -1,5 +1,6 @@
 #include <iostream>
-#include "scheduler.hpp"
+#include "scheduler/scheduler.hpp"
+#include "memory/memory.hpp"
 using namespace std;
 
 void bootSystem(){
@@ -17,6 +18,7 @@ void bootSystem(){
 int main(){
     bootSystem();
     runScheduler();
+    runMemoryManager();
 
     return 0;
 }

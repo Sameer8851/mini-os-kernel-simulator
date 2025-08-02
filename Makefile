@@ -1,17 +1,22 @@
 CXX = g++
-CXXFLAGS = -Wall -std=c++17
+CXXFLAGS = -Wall -std=c++17 -I./src
 SRC_DIR = src
 BUILD_DIR = build
 
-all: $(BUILD_DIR)/main.exe
+all: build/main
 
-$(BUILD_DIR)/main.exe: $(SRC_DIR)/main.cpp $(SRC_DIR)/scheduler.cpp
-	mkdir -p $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $(BUILD_DIR)/main.exe $(SRC_DIR)/main.cpp $(SRC_DIR)/scheduler.cpp
+build/main: \
+    $(SRC_DIR)/main.cpp \
+    $(SRC_DIR)/scheduler/scheduler.cpp \
+    $(SRC_DIR)/memory/memory.cpp
+	mkdir -p build
+	$(CXX) $(CXXFLAGS) -o build/main \
+    $(SRC_DIR)/main.cpp \
+    $(SRC_DIR)/scheduler/scheduler.cpp \
+    $(SRC_DIR)/memory/memory.cpp
 
-
-run: all
-	./$(BUILD_DIR)/main.exe
+run: build/main
+	./build/main
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf build
