@@ -1,50 +1,76 @@
 #include <iostream>
 #include <vector>
-#include <string>
-#include "memory/memory.hpp"
+#include "memory.hpp"
 
 using namespace std;
 
+void printMemoryState(const vector<MemoryBlock>& memory) {
+    cout << "\n Memory State:\n";
+    for (const auto& block : memory) {
+        cout << "  Block ID: " << (block.id == -1 ? "FREE" : to_string(block.id))
+             << " | Size: " << block.size
+             << " | Status: " << (block.allocated ? "Allocated" : "Free") << "\n";
+    }
+    cout << endl;
+}
 
-struct MemoryBlock {
-    bool isFree;
-    string processName;
-    int size;
-};
+
+
+bool allocateMemory(vector<MemoryBlock>& memory, int id, int size) {
+    for (auto it = memory.begin(); it != memory.end(); ++it) {
+        if (!it->allocated && it->size >= size) {
+            if (it->size > size) {
+                // Split block into allocated + leftover
+                MemoryBlock remaining(-1, it->size - size, false);
+                it = memory.insert(it + 1, remaining);
+                it--;
+                it->size = size;
+            }
+            it->allocated = true;
+            it->id = id;
+            cout << " Allocated " << size << "KB to Process " << id << "\n";
+            return true;
+        }
+    }
+    cout << "❌ Failed to allocate " << size << "KB to Process " << id << " (Not enough space)\n";
+    return false;
+}
+
+void freeMemory(vector<MemoryBlock>& memory,int id){
+    for(auto& block : memory){
+        if (block.allocated && block.id == id){
+            block.allocated = false;
+            block.id = -1;
+            cout << "Freed memory block from Process " << id << "\n";
+            return;
+        }
+    }
+    cout << "No block found for Process " << id << "\n";
+}
 
 void runMemoryManager(){
-    cout << "\n--- Memory Manager Simulation ---" << endl;
+    cout << "\n--- Memory Manager Simulation ---\n";
 
-    const int blockSize = 100;
-    const int totalBlocks = 3;
-    vector<MemoryBlock> memory(totalBlocks,{true, "",blockSize});
-
-    vector<pair<string, int>> processList = {
-        {"P1",50},{"P2",30},{"P3",70}
+    vector<MemoryBlock> memory = {
+        MemoryBlock(-1 , 100 , false),
+        MemoryBlock(-1,100,false),
+        MemoryBlock(-1,100,false)
     };
 
-    for(auto& p : processList){
-        bool allocated = false;
-        for(auto& block : memory){
-            if(block.isFree && p.second <= block.size){
-                block.isFree = false;
-                block.processName = p.first;
-                cout << "Allocated " << p.first << " (Size " << p.second << ") to block\n";
-                allocated = true;
-                break;
-            }
-        }
-        if(!allocated){
-            cout << "Not enough memory for " << p.first << endl;
-        }
-    }
-    cout << "\nDeallocation memory... \n";
-    for(auto& block : memory){
-        if(!block.isFree){
-            cout<< "Process " << block.processName << " finished. Deallocating block.\n";
-            block.isFree =true;
-            block.processName = "";
-        }
-    }
-    cout << "\nMemory Manager Simulation Complete\n";
+    printMemoryState(memory);
+
+    allocateMemory(memory, 1, 50);
+    allocateMemory(memory, 2, 80);
+    allocateMemory(memory, 3, 70);
+    printMemoryState(memory);
+
+
+    freeMemory(memory, 2);
+    printMemoryState(memory);
+
+
+    allocateMemory(memory, 4, 60);
+    printMemoryState(memory);
+
+    cout << "\n Memory Manager Simulation Complete \n";
 }
