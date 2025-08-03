@@ -15,7 +15,8 @@ struct MemoryBlock {
 
 void runMemoryManager();
 
-bool allocateMemory(std::vector<MemoryBlock>& memory, int id, int size);
+bool allocateMemory(std::vector<MemoryBlock>& memory, int id, int size,int& internalFrag);
+int calculateExternalFragmentation(const std::vector<MemoryBlock>& memory,int requestSize);
 void freeMemory(std::vector<MemoryBlock>& memory, int id);
 void printMemoryState(const std::vector<MemoryBlock>& memory);
 

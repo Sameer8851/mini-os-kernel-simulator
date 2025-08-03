@@ -14,20 +14,25 @@ void printMemoryState(const vector<MemoryBlock>& memory) {
     cout << endl;
 }
 
+int totalInternalFragmentation = 0;
 
-
-bool allocateMemory(vector<MemoryBlock>& memory, int id, int size) {
+bool allocateMemory(vector<MemoryBlock>& memory, int id, int size, int& totalInternalFragmentation) {
+    
     for (auto it = memory.begin(); it != memory.end(); ++it) {
         if (!it->allocated && it->size >= size) {
             if (it->size > size) {
-                // Split block into allocated + leftover
-                MemoryBlock remaining(-1, it->size - size, false);
+                int leftover = it->size - size;
+                totalInternalFragmentation += leftover;
+
+                // split block
+                MemoryBlock remaining(-1, leftover, false);
                 it = memory.insert(it + 1, remaining);
                 it--;
                 it->size = size;
             }
             it->allocated = true;
             it->id = id;
+
             cout << " Allocated " << size << "KB to Process " << id << "\n";
             return true;
         }
@@ -60,31 +65,55 @@ void freeMemory(vector<MemoryBlock>& memory,int id){
     cout << "No block found for Process " << id << "\n";
 }
 
+int calculateExternalFragmentation(const vector<MemoryBlock>& memory, int requestedSize) {
+    int totalFree = 0;
+    bool hasFittingBlock = false;
+
+    for (const auto& block : memory) {
+        if (!block.allocated) {
+            totalFree += block.size;
+            if (block.size >= requestedSize) {
+                hasFittingBlock = true;
+            }
+        }
+    }
+
+    if (!hasFittingBlock && totalFree >= requestedSize) {
+        return totalFree;
+    }
+
+    return 0;
+}
 
 
-void runMemoryManager(){
-    cout << "\n--- Memory Manager Simulation ---\n";
+void runMemoryManager() {
+    cout << "\n--- Memory Manager: Merging Test ---\n";
+    int totalInternalFrag = 0;
 
     vector<MemoryBlock> memory = {
         MemoryBlock(-1 , 100 , false),
-        MemoryBlock(-1,100,false),
-        MemoryBlock(-1,100,false)
+        MemoryBlock(-1 , 100 , false),
+        MemoryBlock(-1 , 100 , false)
     };
 
     printMemoryState(memory);
 
-    allocateMemory(memory, 1, 50);
-    allocateMemory(memory, 2, 80);
-    allocateMemory(memory, 3, 70);
+    allocateMemory(memory, 1, 50,totalInternalFrag);   // Allocates part of block 0
+    allocateMemory(memory, 2, 80,totalInternalFrag);   // Allocates part of block 1
+    allocateMemory(memory, 3, 90,totalInternalFrag);   // Allocates part of block 2
+
     printMemoryState(memory);
 
+    freeMemory(memory, 1); // Free block 1
+    freeMemory(memory, 2); // Free block 2 — should merge with 1
+    freeMemory(memory, 3); // Free block 3 — should merge with merged 1 & 2
 
-    freeMemory(memory, 2);
-    printMemoryState(memory);
+    printMemoryState(memory); // Should see 1 large free block
+    int frag = calculateExternalFragmentation(memory,60);
+    if(frag > 0){
+        cout << "External Fragmentation: " << frag << "KB (Requested: 60KB)\n";
+    }
 
-
-    allocateMemory(memory, 4, 60);
-    printMemoryState(memory);
-
-    cout << "\n Memory Manager Simulation Complete \n";
+    cout << "\n Merging Simulation Complete \n";
 }
+
