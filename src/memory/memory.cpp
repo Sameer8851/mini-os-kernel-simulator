@@ -37,7 +37,7 @@ bool allocateMemory(vector<MemoryBlock>& memory, int id, int size, int& totalInt
             return true;
         }
     }
-    cout << "❌ Failed to allocate " << size << "KB to Process " << id << " (Not enough space)\n";
+    cout << " Failed to allocate " << size << "KB to Process " << id << " (Not enough space)\n";
     return false;
 }
 

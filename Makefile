@@ -13,7 +13,8 @@ build/main: \
 	$(CXX) $(CXXFLAGS) -o build/main \
     $(SRC_DIR)/main.cpp \
     $(SRC_DIR)/scheduler/scheduler.cpp \
-    $(SRC_DIR)/memory/memory.cpp
+    $(SRC_DIR)/memory/memory.cpp \
+    $(SRC_DIR)/memory/memory_cli.cpp
 
 run: build/main
 	./build/main

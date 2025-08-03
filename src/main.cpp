@@ -18,7 +18,7 @@ void bootSystem(){
 int main(){
     bootSystem();
     runScheduler();
-    runMemoryManager();
+    runMemoryCLI();
 
     return 0;
 }
