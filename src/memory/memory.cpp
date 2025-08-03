@@ -36,17 +36,31 @@ bool allocateMemory(vector<MemoryBlock>& memory, int id, int size) {
     return false;
 }
 
+void mergeFreeBlocks(vector<MemoryBlock>& memory){
+    for(size_t i = 0;i + 1<memory.size();){
+        if(!memory[i].allocated && !memory[i+1].allocated){
+            memory[i].size += memory[i+1].size;
+            memory.erase(memory.begin()+i+1);
+        } else{
+            ++i;
+        }
+    }
+}
+
 void freeMemory(vector<MemoryBlock>& memory,int id){
     for(auto& block : memory){
         if (block.allocated && block.id == id){
             block.allocated = false;
             block.id = -1;
             cout << "Freed memory block from Process " << id << "\n";
+            mergeFreeBlocks(memory);
             return;
         }
     }
     cout << "No block found for Process " << id << "\n";
 }
+
+
 
 void runMemoryManager(){
     cout << "\n--- Memory Manager Simulation ---\n";
