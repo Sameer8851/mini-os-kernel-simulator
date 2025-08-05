@@ -14,7 +14,9 @@ build/main: \
     $(SRC_DIR)/main.cpp \
     $(SRC_DIR)/scheduler/scheduler.cpp \
     $(SRC_DIR)/memory/memory.cpp \
-    $(SRC_DIR)/memory/memory_cli.cpp
+    $(SRC_DIR)/memory/memory_cli.cpp \
+    $(SRC_DIR)/paging/paging.cpp \
+    $(SRC_DIR)/paging/paging-cli.cpp
 
 run: build/main
 	./build/main
