@@ -72,3 +72,27 @@ void PagingManager::printFrameTable() const {
             cout << "Occupied by P" << frameTable[i] << "\n";
     }
 }
+int PagingManager::translateAddress(int pid,int logicalAddress){
+    if(pageTable.find(pid) == pageTable.end()){
+        cout << "Process " << pid << " not found.\n";
+        return -1;
+    }
+
+    int pageNumber = logicalAddress / pageSize;
+    int offset = logicalAddress % pageSize;
+
+    if(pageNumber >= pageTable[pid].size()){
+        cout << "Page fault: page number " << pageNumber << " not allocated.\n";
+        return -1;
+    }
+
+    int frameNumber = pageTable[pid][pageNumber];
+    int physicalAddress = frameNumber * pageSize + offset;
+
+    cout << "Logical Address: " << logicalAddress
+         << " -> Page: " << pageNumber << ", Offset: " << offset
+         << " -> Frame: " << frameNumber
+         << " -> Physical Address: " << physicalAddress << "\n";
+
+    return physicalAddress;
+}

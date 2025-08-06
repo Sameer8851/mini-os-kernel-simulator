@@ -22,6 +22,8 @@ public:
     void printPageTable() const;
     void printFrameTable() const;
     
+    int translateAddress(int pid,int logicalAddress);
+    
 };
 
 void runPagingCLI();
