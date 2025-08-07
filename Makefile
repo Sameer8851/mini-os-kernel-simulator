@@ -16,7 +16,9 @@ build/main: \
     $(SRC_DIR)/memory/memory.cpp \
     $(SRC_DIR)/memory/memory_cli.cpp \
     $(SRC_DIR)/paging/paging.cpp \
-    $(SRC_DIR)/paging/paging-cli.cpp
+    $(SRC_DIR)/paging/paging-cli.cpp \
+    $(SRC_DIR)/memory/virtual_memory/virtual_memory.cpp \
+    $(SRC_DIR)/memory/virtual_memory/vm_cli.cpp \
 
 run: build/main
 	./build/main
