@@ -1,12 +1,13 @@
 #include "virtual_memory.hpp"
 #include <iostream>
-#include <algorithm>
+#include <queue>
+#include <climits>
 
 
 using namespace std;
 
-VirtualMemoryManager::VirtualMemoryManager(int memorySize, int pageSize)
-    : pageSize(pageSize), pageFaults(0)
+VirtualMemoryManager::VirtualMemoryManager(int memorySize, int pageSize, ReplacementPolicy policy)
+    : pageSize(pageSize), pageFaults(0),accessCounter(0),policy(policy)
 {
     totalFrames = memorySize / pageSize;
     frameTable.resize(totalFrames, {-1, -1});  
@@ -27,6 +28,70 @@ void VirtualMemoryManager::allocateProcess(int processId, int numPages) {
     cout << "Allocated " << numPages << " pages to process " << processId << ".\n";
 }
 
+void VirtualMemoryManager::handlePageFault(int processId,int virtualPageNumber,PageTable& pt){
+    pageFaults++;
+
+     // Try to find a free frame
+    for (int i = 0; i < totalFrames; ++i) {
+        if (frameTable[i].first == -1) {
+            frameTable[i] = {processId, virtualPageNumber};
+            pt[virtualPageNumber].frameNumber = i;
+            pt[virtualPageNumber].valid = true;
+            pt[virtualPageNumber].lastAccessTime = accessCounter++;
+            if (policy == ReplacementPolicy::FIFO) {
+                pageQueue.push({processId, virtualPageNumber});
+            }
+            return;
+        }
+    }
+
+    // No free frame; replace page based on policy
+    if (policy == ReplacementPolicy::FIFO) {
+        // Evict oldest page in FIFO queue
+        auto toEvict = pageQueue.front();
+        pageQueue.pop();
+
+        int victimPid = toEvict.first;
+        int victimVpn = toEvict.second;
+        int frame = processPageTables[victimPid][victimVpn].frameNumber;
+
+        processPageTables[victimPid][victimVpn].valid = false;
+        frameTable[frame] = {processId, virtualPageNumber};
+
+        pt[virtualPageNumber].frameNumber = frame;
+        pt[virtualPageNumber].valid = true;
+        pt[virtualPageNumber].lastAccessTime = accessCounter++;
+        pageQueue.push({processId, virtualPageNumber});
+    }
+    else if (policy == ReplacementPolicy::LRU) {
+        // Find least recently used page
+        int lruPid = -1, lruVpn = -1;
+        unsigned long minAccessTime = ULONG_MAX;
+        int lruFrame = -1;
+
+        for (int i = 0; i < totalFrames; ++i) {
+            int pid = frameTable[i].first;
+            int vpn = frameTable[i].second;
+            unsigned long accessTime = processPageTables[pid][vpn].lastAccessTime;
+
+            if (accessTime < minAccessTime) {
+                minAccessTime = accessTime;
+                lruPid = pid;
+                lruVpn = vpn;
+                lruFrame = i;
+            }
+        }
+
+        // Evict LRU page
+        processPageTables[lruPid][lruVpn].valid = false;
+        frameTable[lruFrame] = {processId, virtualPageNumber};
+
+        pt[virtualPageNumber].frameNumber = lruFrame;
+        pt[virtualPageNumber].valid = true;
+        pt[virtualPageNumber].lastAccessTime = accessCounter++;
+    }
+}
+
 
 void VirtualMemoryManager::accessPage(int processId, int virtualPageNumber) {
     if (processPageTables.find(processId) == processPageTables.end()) {
@@ -43,34 +108,7 @@ void VirtualMemoryManager::accessPage(int processId, int virtualPageNumber) {
 
     if (!pt[virtualPageNumber].valid) {
         cout << "Page fault at P" << processId << " VP" << virtualPageNumber << "\n";
-        pageFaults++;
-
-        // Try to find free frame
-        for (int i = 0; i < totalFrames; ++i) {
-            if (frameTable[i].first == -1) {
-                frameTable[i] = {processId, virtualPageNumber};
-                pt[virtualPageNumber].frameNumber = i;
-                pt[virtualPageNumber].valid = true;
-                pageQueue.push_back({processId, virtualPageNumber});
-                return;
-            }
-        }
-
-        // FIFO Replacement
-        pair<int, int> toEvict = pageQueue.front();
-        pageQueue.erase(pageQueue.begin());
-
-        int victimPid = toEvict.first;
-        int victimVpn = toEvict.second;
-        int frame = processPageTables[victimPid][victimVpn].frameNumber;
-
-        processPageTables[victimPid][victimVpn].valid = false;
-        frameTable[frame] = {processId, virtualPageNumber};
-
-        pt[virtualPageNumber].frameNumber = frame;
-        pt[virtualPageNumber].valid = true;
-
-        pageQueue.push_back({processId, virtualPageNumber});
+        handlePageFault(processId,virtualPageNumber,pt);
     } else {
         int frame = pt[virtualPageNumber].frameNumber;
         int physicalAddress = frame * pageSize;
@@ -95,12 +133,18 @@ void VirtualMemoryManager::freeProcess(int processId) {
         }
     }
 
-    // Remove from pageQueue
-    pageQueue.erase(
-        remove_if(pageQueue.begin(), pageQueue.end(),
-                  [processId](pair<int, int> p) { return p.first == processId; }),
-        pageQueue.end()
-    );
+    // Remove from fifo
+    if (policy == ReplacementPolicy::FIFO) {
+        queue<pair<int,int>> newQueue;
+        while(!pageQueue.empty()){
+            auto p = pageQueue.front();
+            pageQueue.pop();
+            if(p.first != processId){
+                newQueue.push(p);
+            }
+        }
+        pageQueue = move(newQueue);
+    }
 
     processPageTables.erase(processId);
     cout << "Freed process " << processId << " and its pages.\n";
@@ -113,11 +157,12 @@ void VirtualMemoryManager::printPageTable() const {
         const PageTable &pt = proc.second;
 
         cout << "Process " << pid << ":\n";
-        cout << "Page\tFrame\tValid\n";
+        cout << "Page\tFrame\tValid\tLastAccessTime\n";
         for (const auto &entry : pt) {
             cout << entry.first << "\t"
                  << entry.second.frameNumber << "\t"
-                 << (entry.second.valid ? "Yes" : "No") << "\n";
+                 << (entry.second.valid ? "Yes" : "No") << "\n"
+                 << entry.second.lastAccessTime << "\n";
         }
         cout << "\n";
     }
