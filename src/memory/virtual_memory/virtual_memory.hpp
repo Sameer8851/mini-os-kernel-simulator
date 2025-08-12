@@ -8,7 +8,9 @@
 
 enum class ReplacementPolicy{
     FIFO,
-    LRU
+    LRU,
+    CLOCK,
+    OPTIMAL
 };
 
 struct PageTableEntry {
@@ -35,11 +37,18 @@ public:
     void printFrameTable() const;
 
     int getPageFaults() const {return pageFaults; }
+    void runOptimalSimulation(const std::vector<std::pair<int, int>>& referenceString);
 
 private:
     int pageSize;
     int totalFrames;
     int pageFaults;
+    int clockHand;
+
+    // for Optimal algo
+    std::vector<std::pair<int,int>> futureReferences;
+    int currentReferenceIndex;
+
     unsigned long accessCounter; // for tracking LRU
     ReplacementPolicy policy;
 
@@ -48,8 +57,10 @@ private:
 
     std::queue<std::pair<int, int>> pageQueue; // For FIFO: (processId, pageNumber)
     void handlePageFault(int processId,int virtualPageNumber,PageTable& pt);
+    
 };
 
 void runVirtualMemoryCLI();
+
 
 #endif
