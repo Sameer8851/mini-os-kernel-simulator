@@ -1,48 +1,55 @@
 #include "virtual_memory.hpp"
 #include <iostream>
+#include <vector>
+#include <string>
 
 using namespace std;
 
-void automatedTest() {
-    cout << "Starting automated test...\n";
+// Helper function to run a standardized test for a given policy and log level
+void runTest(ReplacementPolicy policy, const string& policyName, LogLevel logLevel) {
+    cout << "\n==========================================================\n";
+    cout << "  Testing Policy: " << policyName << " | Log Level: " 
+         << (logLevel == NORMAL ? "NORMAL" : (logLevel == VERBOSE ? "VERBOSE" : "DEBUG")) << "\n";
+    cout << "==========================================================\n";
 
-    int memorySize = 16; // KB
-    int pageSize = 4;    // KB
-    VirtualMemoryManager vmm(memorySize, pageSize, ReplacementPolicy::LRU);
+    // Setup: 4 frames total (16KB memory / 4KB page size)
+    VirtualMemoryManager vmm(16, 4, policy);
+    
+    // Set the log level for this specific test run
+    vmm.setLogLevel(logLevel);
 
-    // Allocate process 1 with 5 pages
-    vmm.allocateProcess(1, 5);
+    // We will use one process with 6 virtual pages (0-5)
+    vmm.allocateProcess(1, 6);
 
-    // Access pages to fill memory and cause page faults
-    vmm.accessPage(1, 0);
-    vmm.accessPage(1, 1);
-    vmm.accessPage(1, 2);
-    vmm.accessPage(1, 3);
+    // A standard reference string to test the policies
+    vector<int> referenceString = {0, 1, 2, 3, 4, 0, 1, 5, 0, 1, 2, 3, 4, 5};
+    
+    for(int page : referenceString) {
+        vmm.accessPage(1, page);
+    }
+    cout << "\n";
 
-    // All 4 frames now used, next access should cause replacement
-    vmm.accessPage(1, 4);  // Page fault + replacement expected
-
-    // Access page 0 again to update its usage
-    vmm.accessPage(1, 0);
-
-    // Access another new page to cause another replacement
-    vmm.accessPage(1, 5);
-
-    // Print page table and frame table
-    vmm.printPageTable();
+    // Print final state
+    cout << "--- Final State ---\n";
     vmm.printFrameTable();
-
-    // Print total page faults
-    cout << "Total page faults: " << vmm.getPageFaults() << "\n";
-
-    // Free process and print frame table to verify cleanup
-    vmm.freeProcess(1);
-    vmm.printFrameTable();
-
-    cout << "Automated test completed.\n";
+    cout << "Total Page Faults: " << vmm.getPageFaults() << "\n";
 }
 
+
 int main() {
-    automatedTest();
+    cout << "===== Starting Automated Virtual Memory Tests =====\n";
+
+    // Test the LRU policy with all three log levels
+    runTest(ReplacementPolicy::LRU, "LRU", NORMAL);
+    runTest(ReplacementPolicy::LRU, "LRU", VERBOSE);
+    runTest(ReplacementPolicy::LRU, "LRU", DEBUG);
+
+    // You can easily add tests for other policies here as well
+    // For example, to test FIFO:
+    // runTest(ReplacementPolicy::FIFO, "FIFO", NORMAL);
+    // runTest(ReplacementPolicy::FIFO, "FIFO", VERBOSE);
+
+    cout << "\n===== Automated Tests Completed =====\n";
+    
     return 0;
 }

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <queue>
 #include <climits>
-
+#include <sstream> // Include this for stringstream
 
 using namespace std;
 
@@ -10,32 +10,49 @@ VirtualMemoryManager::VirtualMemoryManager(int memorySize, int pageSize, Replace
     : pageSize(pageSize), pageFaults(0),accessCounter(0),policy(policy),clockHand(0), currentReferenceIndex(0)
 {
     totalFrames = memorySize / pageSize;
-    frameTable.resize(totalFrames, {-1, -1});  
+    frameTable.resize(totalFrames, {-1, -1});
+}
+
+void VirtualMemoryManager::log(LogLevel level, const string& message) const {
+    if (current_log_level >= level) {
+        cout << message << endl;
+    }
+}
+
+void VirtualMemoryManager::setLogLevel(LogLevel level){
+    current_log_level = level;
 }
 
 void VirtualMemoryManager::allocateProcess(int processId, int numPages) {
+    stringstream ss;
     if (processPageTables.find(processId) != processPageTables.end()) {
-        cout << "Process " << processId << " already exists.\n";
+        ss << "Error: Process " << processId << " already exists.";
+        log(NORMAL, ss.str());
         return;
     }
-
+    
     PageTable pt;
     for (int i = 0; i < numPages; ++i) {
-        pt[i] = PageTableEntry();  // initially invalid
+        pt[i] = PageTableEntry(); // initially invalid
     }
 
     processPageTables[processId] = pt;
-    cout << "Allocated " << numPages << " pages to process " << processId << ".\n";
+    ss << "Allocated " << numPages << " pages to process " << processId << ".";
+    log(NORMAL, ss.str());
 }
 
 void VirtualMemoryManager::handlePageFault(int processId, int virtualPageNumber, PageTable& pt) {
     pageFaults++;
-    cout << "Handling page fault...\n";
+    stringstream ss;
+    ss << "Handling page fault...";
+    log(VERBOSE, ss.str());
 
     // Try to find a free frame first
     for (int i = 0; i < totalFrames; ++i) {
         if (frameTable[i].first == -1) {
-            cout << "Found free frame " << i << ".\n";
+            stringstream ss_found;
+            ss_found << "Found free frame " << i << ".";
+            log(VERBOSE, ss_found.str());
             frameTable[i] = {processId, virtualPageNumber};
             pt[virtualPageNumber].frameNumber = i;
             pt[virtualPageNumber].valid = true;
@@ -49,10 +66,9 @@ void VirtualMemoryManager::handlePageFault(int processId, int virtualPageNumber,
     }
 
     // If no free frame, begin replacement logic
-    cout << "No free frames. Starting replacement...\n";
+    log(VERBOSE, "No free frames. Starting replacement...");
     int victimFrame = -1; // This will be set by the policy block
 
-    // --- REFACTORED: Each policy block now ONLY finds the victimFrame ---
     if (policy == ReplacementPolicy::FIFO) {
         auto toEvict = pageQueue.front();
         pageQueue.pop();
@@ -115,7 +131,10 @@ void VirtualMemoryManager::handlePageFault(int processId, int virtualPageNumber,
         // 1. Identify and invalidate the victim's page table entry
         int victimPid = frameTable[victimFrame].first;
         int victimVpn = frameTable[victimFrame].second;
-        cout << "Evicting P" << victimPid << " VP" << victimVpn << " from frame " << victimFrame << ".\n";
+        stringstream ss_evict;
+        ss_evict << "Evicting P" << victimPid << " VP" << victimVpn << " from frame " << victimFrame << ".";
+        log(VERBOSE, ss_evict.str());
+        
         processPageTables.at(victimPid).at(victimVpn).valid = false;
         processPageTables.at(victimPid).at(victimVpn).frameNumber = -1;
 
@@ -132,48 +151,50 @@ void VirtualMemoryManager::handlePageFault(int processId, int virtualPageNumber,
         }
     } else {
         // This safety check prevents a crash if a policy fails to find a victim
-        cout << "CRITICAL ERROR: Could not determine a victim frame!\n";
+        log(NORMAL, "CRITICAL ERROR: Could not determine a victim frame!");
     }
 }
-
-
-
 
 void VirtualMemoryManager::accessPage(int processId, int virtualPageNumber) {
+    stringstream ss;
     if (processPageTables.find(processId) == processPageTables.end()) {
-        cout << "Process " << processId << " not found.\n";
+        ss << "Error: Process " << processId << " not found.";
+        log(NORMAL, ss.str());
         return;
     }
 
-    PageTable &pt = processPageTables[processId];
+    PageTable &pt = processPageTables.at(processId);
 
     if (pt.find(virtualPageNumber) == pt.end()) {
-        cout << "Virtual page " << virtualPageNumber << " not allocated.\n";
+        ss << "Virtual page " << virtualPageNumber << " not allocated for process " << processId << ".";
+        log(NORMAL, ss.str());
         return;
     }
 
-    if (!pt[virtualPageNumber].valid) {
-        cout << "Page fault at P" << processId << " VP " << virtualPageNumber << "\n";
-        handlePageFault(processId,virtualPageNumber,pt);
+    if (!pt.at(virtualPageNumber).valid) {
+        ss << "Page fault at P" << processId << " VP " << virtualPageNumber;
+        log(VERBOSE, ss.str());
+        handlePageFault(processId, virtualPageNumber, pt);
     } else {
-        cout << "Page access succesful for P" << processId << " VP " << virtualPageNumber << "\n";
+        ss << "Page access successful for P" << processId << " VP " << virtualPageNumber << ".";
+        log(VERBOSE, ss.str());
         
-        // For LRU: Update the access time on a successful hit.
-        pt[virtualPageNumber].lastAccessTime = accessCounter++;
+        pt.at(virtualPageNumber).lastAccessTime = accessCounter++;
+        pt.at(virtualPageNumber).referenced = true;
 
-        // For Clock: Set the referenced bit to true on a successful hit.
-        pt[virtualPageNumber].referenced = true;
-
-        int frame = pt[virtualPageNumber].frameNumber;
+        int frame = pt.at(virtualPageNumber).frameNumber;
         int physicalAddress = frame * pageSize;
-        cout << "-> Physical Address: " << physicalAddress << " (Frame " << frame << ")\n";
+        stringstream ss_pa;
+        ss_pa << "-> Physical Address: " << physicalAddress << " (Frame " << frame << ")";
+        log(DEBUG, ss_pa.str());
     }
 }
 
-
 void VirtualMemoryManager::freeProcess(int processId) {
+    stringstream ss;
     if (processPageTables.find(processId) == processPageTables.end()) {
-        cout << "Process " << processId << " not found.\n";
+        ss << "Error: Process " << processId << " not found.";
+        log(NORMAL, ss.str());
         return;
     }
 
@@ -202,7 +223,8 @@ void VirtualMemoryManager::freeProcess(int processId) {
     }
 
     processPageTables.erase(processId);
-    cout << "Freed process " << processId << " and its pages.\n";
+    ss << "Freed process " << processId << " and its pages.";
+    log(NORMAL, ss.str());
 }
 
 void VirtualMemoryManager::printPageTable() const {
@@ -212,12 +234,11 @@ void VirtualMemoryManager::printPageTable() const {
         const PageTable &pt = proc.second;
 
         cout << "Process " << pid << ":\n";
-        cout << "Page\tFrame\tValid\tLastAccessTime\n";
+        cout << "Page\tFrame\tValid\n";
         for (const auto &entry : pt) {
             cout << entry.first << "\t"
                  << entry.second.frameNumber << "\t"
-                 << (entry.second.valid ? "Yes" : "No") << "\n"
-                 << entry.second.lastAccessTime << "\n";
+                 << (entry.second.valid ? "Yes" : "No") << "\n";
         }
         cout << "\n";
     }
@@ -237,25 +258,29 @@ void VirtualMemoryManager::printFrameTable() const {
     }
 }
 void VirtualMemoryManager::runOptimalSimulation(const std::vector<std::pair<int, int>>& referenceString) {
+    stringstream ss;
     if (policy != ReplacementPolicy::OPTIMAL) {
-        cout << "Error: Optimal simulation can only be run with the OPTIMAL policy.\n";
+        ss << "Error: Optimal simulation can only be run with the OPTIMAL policy.";
+        log(NORMAL, ss.str());
         return;
     }
     
-    // Store the reference string for the fault handler to see the "future"
     this->futureReferences = referenceString;
     this->currentReferenceIndex = -1;
     
-    // Process each reference in the string
     for (const auto& ref : referenceString) {
         this->currentReferenceIndex++;
         int processId = ref.first;
         int virtualPage = ref.second;
-        cout << "\n--- Accessing P" << processId << " VP" << virtualPage << " ---\n";
+        stringstream ss_access;
+        ss_access << "\n--- Accessing P" << processId << " VP" << virtualPage << " ---";
+        log(VERBOSE, ss_access.str());
         accessPage(processId, virtualPage);
     }
 
-    cout << "\n=== Optimal Simulation Complete ===\n";
+    log(NORMAL, "\n=== Optimal Simulation Complete ===");
     printFrameTable();
-    cout << "Total Page Faults: " << getPageFaults() << "\n";
+    stringstream ss_faults;
+    ss_faults << "Total Page Faults: " << getPageFaults();
+    log(NORMAL, ss_faults.str());
 }

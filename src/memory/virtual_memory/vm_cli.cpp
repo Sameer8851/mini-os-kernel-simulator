@@ -68,7 +68,30 @@ void runVirtualMemoryCLI()
         return; // Exit after the one-shot simulation
     }
 
+    // instance for interactive policies
     VirtualMemoryManager vmm(memorySize, pageSize, policy);
+
+    cout << "\nSelect Log Level for this session:\n";
+    cout << "1. Normal (default)\n";
+    cout << "2. Verbose (show steps)\n";
+    cout << "3. Debug (show addresses and extra detail)\n";
+    cout << "Choice: ";
+    int logLevelChoice;
+    cin >> logLevelChoice;
+    
+    switch(logLevelChoice) {
+        case 2:
+            vmm.setLogLevel(VERBOSE);
+            break;
+        case 3:
+            vmm.setLogLevel(DEBUG);
+            break;
+        default:
+            vmm.setLogLevel(NORMAL);
+            break;
+    }
+
+
     cout << "\nStarting interactive session...\n";
 
     while (true)

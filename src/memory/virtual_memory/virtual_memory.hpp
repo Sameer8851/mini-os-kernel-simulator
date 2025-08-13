@@ -22,7 +22,7 @@ struct PageTableEntry {
 
     PageTableEntry() : frameNumber(-1), valid(false), referenced(false), modified(false),lastAccessTime(0) {}
 };
-
+enum LogLevel {NORMAL,VERBOSE,DEBUG};
 using PageTable = std::unordered_map<int, PageTableEntry>;
 
 class VirtualMemoryManager {
@@ -38,6 +38,8 @@ public:
 
     int getPageFaults() const {return pageFaults; }
     void runOptimalSimulation(const std::vector<std::pair<int, int>>& referenceString);
+    void setLogLevel(LogLevel level);
+    
 
 private:
     int pageSize;
@@ -57,6 +59,10 @@ private:
 
     std::queue<std::pair<int, int>> pageQueue; // For FIFO: (processId, pageNumber)
     void handlePageFault(int processId,int virtualPageNumber,PageTable& pt);
+
+    LogLevel current_log_level = NORMAL;
+    void log(LogLevel level,const std::string& message) const;
+
     
 };
 
