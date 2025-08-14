@@ -46,8 +46,8 @@ void runVirtualMemoryCLI()
         cout << "\n--- Running Predefined Optimal Simulation --- \n";
         VirtualMemoryManager vmm(memorySize, pageSize, policy);
 
-        vmm.allocateProcess(1, 5); // Process 1 has pages 0-4
-        vmm.allocateProcess(2, 4); // Process 2 has pages 0-3
+        vmm.allocateProcess(1); // Process 1 has pages 0-4
+        vmm.allocateProcess(2); // Process 2 has pages 0-3
 
         // Format: {processId, virtualPageNumber}
         vector<pair<int, int>> referenceString = {
@@ -113,12 +113,10 @@ void runVirtualMemoryCLI()
         {
         case 1:
         {
-            int pid, numPages;
+            int pid;
             cout << "Enter Process ID: ";
             cin >> pid;
-            cout << "Enter number of pages to allocate: ";
-            cin >> numPages;
-            vmm.allocateProcess(pid, numPages);
+            vmm.allocateProcess(pid);
             break;
         }
 

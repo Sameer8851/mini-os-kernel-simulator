@@ -13,15 +13,29 @@ enum class ReplacementPolicy{
     OPTIMAL
 };
 
+
 struct PageTableEntry {
     int frameNumber;
     bool valid;
     bool referenced;
-    bool modified;
     unsigned long lastAccessTime;
 
-    PageTableEntry() : frameNumber(-1), valid(false), referenced(false), modified(false),lastAccessTime(0) {}
+    PageTableEntry() : frameNumber(-1), valid(false), referenced(false), lastAccessTime(0) {}
 };
+
+
+using PageTable = std::unordered_map<int, PageTableEntry>;
+
+struct PageDirectoryEntry {
+    PageTable* pageTable;
+    bool valid;
+
+    PageDirectoryEntry() : pageTable(nullptr), valid(false) {}
+};
+using PageDirectory = std::unordered_map<int, PageDirectoryEntry>;
+
+
+
 enum LogLevel {NORMAL,VERBOSE,DEBUG};
 using PageTable = std::unordered_map<int, PageTableEntry>;
 
@@ -29,7 +43,7 @@ class VirtualMemoryManager {
 public:
     VirtualMemoryManager(int memorySize, int pageSize,ReplacementPolicy policy);
 
-    void allocateProcess(int processId, int numPages);
+    void allocateProcess(int processId);
     void accessPage(int processId, int virtualPageNumber);
     void freeProcess(int processId);
 
@@ -55,10 +69,11 @@ private:
     ReplacementPolicy policy;
 
     std::vector<std::pair<int, int>> frameTable; // (processId, pageNumber), or (-1, -1) if free
-    std::map<int, PageTable> processPageTables; // processId → page table
+    std::map<int, PageDirectory> processPageDirectories; 
 
     std::queue<std::pair<int, int>> pageQueue; // For FIFO: (processId, pageNumber)
-    void handlePageFault(int processId,int virtualPageNumber,PageTable& pt);
+    
+    void handlePageFault(int processId, int virtualPageNumber, PageTable& pt, int pti);
 
     LogLevel current_log_level = NORMAL;
     void log(LogLevel level,const std::string& message) const;

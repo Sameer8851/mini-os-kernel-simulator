@@ -2,54 +2,48 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
 using namespace std;
 
-// Helper function to run a standardized test for a given policy and log level
-void runTest(ReplacementPolicy policy, const string& policyName, LogLevel logLevel) {
+// This test is specifically designed to verify the two-level paging system
+void testMultiLevelPaging() {
     cout << "\n==========================================================\n";
-    cout << "  Testing Policy: " << policyName << " | Log Level: " 
-         << (logLevel == NORMAL ? "NORMAL" : (logLevel == VERBOSE ? "VERBOSE" : "DEBUG")) << "\n";
+    cout << "  Testing Multi-Level Paging System\n";
     cout << "==========================================================\n";
 
-    // Setup: 4 frames total (16KB memory / 4KB page size)
-    VirtualMemoryManager vmm(16, 4, policy);
+    // Setup: 4 frames total, using LRU policy for this test
+    VirtualMemoryManager vmm(16, 4, ReplacementPolicy::LRU);
     
-    // Set the log level for this specific test run
-    vmm.setLogLevel(logLevel);
+    // Set log level to VERBOSE to see the new logic in action
+    vmm.setLogLevel(VERBOSE);
 
-    // We will use one process with 6 virtual pages (0-5)
-    vmm.allocateProcess(1, 6);
+    // 1. Allocate a process using the new function signature
+    vmm.allocateProcess(1);
 
-    // A standard reference string to test the policies
-    vector<int> referenceString = {0, 1, 2, 3, 4, 0, 1, 5, 0, 1, 2, 3, 4, 5};
+    // 2. Access a page. This should create the first page table (for PDI 0).
+    cout << "\n--> Accessing page 10 (PDI 0, PTI 10)\n";
+    vmm.accessPage(1, 10);
     
-    for(int page : referenceString) {
-        vmm.accessPage(1, page);
-    }
-    cout << "\n";
+    // 3. Access a page with a large VPN. Since 1100 > 1024 (our PAGE_TABLE_SIZE),
+    //    this will force a directory miss and create a *second* page table (for PDI 1).
+    cout << "\n--> Accessing page 1100 (PDI 1, PTI 76) - Expecting Directory Miss\n";
+    vmm.accessPage(1, 1100);
 
-    // Print final state
-    cout << "--- Final State ---\n";
+    // 4. Access a few more pages to fill the frames and test replacements
+    vmm.accessPage(1, 20);
+    vmm.accessPage(1, 1110);
+    vmm.accessPage(1, 30); // This should trigger a replacement
+
+    // 5. Print the tables to verify the two-level structure
     vmm.printFrameTable();
-    cout << "Total Page Faults: " << vmm.getPageFaults() << "\n";
+    vmm.printPageTable();
+
+    // 6. Free the process to test the new cleanup logic
+    cout << "\n--> Freeing process 1\n";
+    vmm.freeProcess(1);
+    vmm.printFrameTable(); // Should show all frames are free
 }
 
-
 int main() {
-    cout << "===== Starting Automated Virtual Memory Tests =====\n";
-
-    // Test the LRU policy with all three log levels
-    runTest(ReplacementPolicy::LRU, "LRU", NORMAL);
-    runTest(ReplacementPolicy::LRU, "LRU", VERBOSE);
-    runTest(ReplacementPolicy::LRU, "LRU", DEBUG);
-
-    // You can easily add tests for other policies here as well
-    // For example, to test FIFO:
-    // runTest(ReplacementPolicy::FIFO, "FIFO", NORMAL);
-    // runTest(ReplacementPolicy::FIFO, "FIFO", VERBOSE);
-
-    cout << "\n===== Automated Tests Completed =====\n";
-    
+    testMultiLevelPaging();
     return 0;
 }
