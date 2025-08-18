@@ -1,49 +1,43 @@
 #include "virtual_memory.hpp"
 #include <iostream>
-#include <vector>
-#include <string>
-using namespace std;
 
-// This test is specifically designed to verify the two-level paging system
-void testMultiLevelPaging() {
-    cout << "\n==========================================================\n";
-    cout << "  Testing Multi-Level Paging System\n";
-    cout << "==========================================================\n";
+void testMemoryProtection() {
+    std::cout << "\n==========================================================\n";
+    std::cout << "  Testing Memory Protection System (R/W/X)\n";
+    std::cout << "==========================================================\n";
 
-    // Setup: 4 frames total, using LRU policy for this test
-    VirtualMemoryManager vmm(16, 4, ReplacementPolicy::LRU);
-    
-    // Set log level to VERBOSE to see the new logic in action
+    VirtualMemoryManager vmm(16, 4, ReplacementPolicy::FIFO);
     vmm.setLogLevel(VERBOSE);
-
-    // 1. Allocate a process using the new function signature
     vmm.allocateProcess(1);
 
-    // 2. Access a page. This should create the first page table (for PDI 0).
-    cout << "\n--> Accessing page 10 (PDI 0, PTI 10)\n";
-    vmm.accessPage(1, 10);
-    
-    // 3. Access a page with a large VPN. Since 1100 > 1024 (our PAGE_TABLE_SIZE),
-    //    this will force a directory miss and create a *second* page table (for PDI 1).
-    cout << "\n--> Accessing page 1100 (PDI 1, PTI 76) - Expecting Directory Miss\n";
-    vmm.accessPage(1, 1100);
+    // --- Test Case 1: Read-Only Page ---
+    std::cout << "\n--> Setting permissions for VP 10 to: READ=Yes, WRITE=No\n";
+    vmm.setPagePermissions(1, 10, true, false, false); // R=1, W=0, X=0
 
-    // 4. Access a few more pages to fill the frames and test replacements
-    vmm.accessPage(1, 20);
-    vmm.accessPage(1, 1110);
-    vmm.accessPage(1, 30); // This should trigger a replacement
+    // Access the page to load it into memory
+    vmm.accessPage(1, 10, AccessType::READ);
 
-    // 5. Print the tables to verify the two-level structure
-    vmm.printFrameTable();
-    vmm.printPageTable();
+    std::cout << "\n--> Attempting an ALLOWED action: Reading from VP 10...\n";
+    vmm.accessPage(1, 10, AccessType::READ); // Should succeed
 
-    // 6. Free the process to test the new cleanup logic
-    cout << "\n--> Freeing process 1\n";
-    vmm.freeProcess(1);
-    vmm.printFrameTable(); // Should show all frames are free
+    std::cout << "\n--> Attempting a DISALLOWED action: Writing to VP 10...\n";
+    vmm.accessPage(1, 10, AccessType::WRITE); // Should cause a protection fault
+
+    // --- Test Case 2: Non-Executable Page ---
+    std::cout << "\n--> Setting permissions for VP 20 to: READ=Yes, WRITE=Yes, EXECUTE=No\n";
+    vmm.setPagePermissions(1, 20, true, true, false); // R=1, W=1, X=0
+
+    // Access the page to load it
+    vmm.accessPage(1, 20, AccessType::READ);
+
+    std::cout << "\n--> Attempting an ALLOWED action: Writing to VP 20...\n";
+    vmm.accessPage(1, 20, AccessType::WRITE); // Should succeed
+
+    std::cout << "\n--> Attempting a DISALLOWED action: Executing VP 20...\n";
+    vmm.accessPage(1, 20, AccessType::EXECUTE); // Should cause a protection fault
 }
 
 int main() {
-    testMultiLevelPaging();
+    testMemoryProtection();
     return 0;
 }
