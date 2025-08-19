@@ -1,5 +1,6 @@
-#include "virtual_memory.hpp"
+#include "memory/virtual_memory/virtual_memory.hpp"
 #include <iostream>
+#include <random>
 
 void testMemoryProtection() {
     std::cout << "\n==========================================================\n";
@@ -37,7 +38,36 @@ void testMemoryProtection() {
     vmm.accessPage(1, 20, AccessType::EXECUTE); // Should cause a protection fault
 }
 
+void stressTestRandomAccess() {
+    std::cout << "\n--- Stress Testing with Random Accesses ---\n";
+    VirtualMemoryManager vmm(128, 4, ReplacementPolicy::LRU); // More frames for a better test
+    vmm.setLogLevel(NORMAL); // Keep output clean for the stress test
+
+    vmm.allocateProcess(1);
+    vmm.allocateProcess(2);
+
+    // Setup for random number generation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> proc_dist(1, 2); // Randomly choose process 1 or 2
+    std::uniform_int_distribution<> page_dist(0, 2000); // Access pages up to ~2 page tables deep
+
+    int num_accesses = 5000;
+    std::cout << "Performing " << num_accesses << " random page accesses..." << std::endl;
+
+    for (int i = 0; i < num_accesses; ++i) {
+        int processId = proc_dist(gen);
+        int virtualPage = page_dist(gen);
+        vmm.accessPage(processId, virtualPage, AccessType::READ); // Simulate a read
+    }
+
+    std::cout << "Stress test completed without crashing." << std::endl;
+    vmm.printFrameTable();
+    std::cout << "Total page faults under stress: " << vmm.getPageFaults() << std::endl;
+}
+
 int main() {
     testMemoryProtection();
+    stressTestRandomAccess();
     return 0;
 }
