@@ -2,107 +2,49 @@
 #define VIRTUAL_MEMORY_MANAGER_HPP
 
 #include <vector>
-#include <unordered_map>
+#include <string>
 #include <map>
 #include <queue>
+#include "scheduler/pcb.hpp"
+#include "memory/virtual_memory/memory_types.hpp"
 
-enum class ReplacementPolicy
-{
-    FIFO,
-    LRU,
-    CLOCK,
-    OPTIMAL
-};
+// --- Enums ---
+enum class ReplacementPolicy { FIFO, LRU, CLOCK };
+enum class AccessType { READ, WRITE, EXECUTE };
+enum LogLevel { NORMAL, VERBOSE, DEBUG };
 
-struct PageTableEntry
-{
-    int frameNumber;
-    bool valid;
-    bool referenced;
-    unsigned long lastAccessTime;
+const int PAGE_TABLE_SIZE = 1024;
 
-    // Protection bits
-    bool can_read;
-    bool can_write;
-    bool can_execute;
-
-    PageTableEntry() : frameNumber(-1),
-                       valid(false),
-                       referenced(false),
-                       lastAccessTime(0),
-                       can_read(false),
-                       can_write(false),
-                       can_execute(false) {}
-};
-
-using PageTable = std::unordered_map<int, PageTableEntry>;
-
-struct PageDirectoryEntry
-{
-    PageTable *pageTable;
-    bool valid;
-
-    PageDirectoryEntry() : pageTable(nullptr), valid(false) {}
-};
-using PageDirectory = std::unordered_map<int, PageDirectoryEntry>;
-
-enum class AccessType{
-    READ,
-    WRITE,
-    EXECUTE
-};
-
-
-enum LogLevel
-{
-    NORMAL,
-    VERBOSE,
-    DEBUG
-};
-using PageTable = std::unordered_map<int, PageTableEntry>;
-
-class VirtualMemoryManager
-{
+class VirtualMemoryManager {
 public:
     VirtualMemoryManager(int memorySize, int pageSize, ReplacementPolicy policy);
 
-    void allocateProcess(int processId);
-    void accessPage(int processId, int virtualPageNumber,AccessType type);
-    void freeProcess(int processId);
-
-    void printPageTable() const;
+    void allocateProcess(ProcessControlBlock& pcb);
+    void accessPage(ProcessControlBlock& pcb, int virtualPageNumber, AccessType type);
+    void freeProcess(ProcessControlBlock& pcb);
+    void setPagePermissions(ProcessControlBlock& pcb, int virtualPageNumber, bool read, bool write, bool execute);
+    void printPageTable(const ProcessControlBlock& pcb) const;
     void printFrameTable() const;
-
     int getPageFaults() const { return pageFaults; }
-    void runOptimalSimulation(const std::vector<std::pair<int, int>> &referenceString);
     void setLogLevel(LogLevel level);
-
-    void setPagePermissions(int processId,int virtualPageNumber,bool read,bool write,bool execute);
+    
+    // Helpers for testing
+    const std::vector<std::pair<ProcessControlBlock*, int>>& getFrameTable() const { return frameTable; }
 
 private:
     int pageSize;
     int totalFrames;
     int pageFaults;
     int clockHand;
-
-    // for Optimal algo
-    std::vector<std::pair<int, int>> futureReferences;
-    int currentReferenceIndex;
-
-    unsigned long accessCounter; // for tracking LRU
+    unsigned long accessCounter;
     ReplacementPolicy policy;
-
-    std::vector<std::pair<int, int>> frameTable; // (processId, pageNumber), or (-1, -1) if free
-    std::map<int, PageDirectory> processPageDirectories;
-
-    std::queue<std::pair<int, int>> pageQueue; // For FIFO: (processId, pageNumber)
-
-    void handlePageFault(int processId, int virtualPageNumber, PageTable &pt, int pti);
-
     LogLevel current_log_level = NORMAL;
-    void log(LogLevel level, const std::string &message) const;
-};
 
-void runVirtualMemoryCLI();
+    std::vector<std::pair<ProcessControlBlock*, int>> frameTable;
+    std::queue<std::pair<int, int>> pageQueue;
+
+    void handlePageFault(ProcessControlBlock& pcb, int virtualPageNumber, PageTable& pt, int pti);
+    void log(LogLevel level, const std::string& message) const;
+};
 
 #endif

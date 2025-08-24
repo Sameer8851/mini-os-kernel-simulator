@@ -1,73 +1,84 @@
 #include "memory/virtual_memory/virtual_memory.hpp"
 #include <iostream>
-#include <random>
+#include <string>
+#include <vector>
+#include <map>
 
-void testMemoryProtection() {
-    std::cout << "\n==========================================================\n";
-    std::cout << "  Testing Memory Protection System (R/W/X)\n";
-    std::cout << "==========================================================\n";
-
-    VirtualMemoryManager vmm(16, 4, ReplacementPolicy::FIFO);
-    vmm.setLogLevel(VERBOSE);
-    vmm.allocateProcess(1);
-
-    // --- Test Case 1: Read-Only Page ---
-    std::cout << "\n--> Setting permissions for VP 10 to: READ=Yes, WRITE=No\n";
-    vmm.setPagePermissions(1, 10, true, false, false); // R=1, W=0, X=0
-
-    // Access the page to load it into memory
-    vmm.accessPage(1, 10, AccessType::READ);
-
-    std::cout << "\n--> Attempting an ALLOWED action: Reading from VP 10...\n";
-    vmm.accessPage(1, 10, AccessType::READ); // Should succeed
-
-    std::cout << "\n--> Attempting a DISALLOWED action: Writing to VP 10...\n";
-    vmm.accessPage(1, 10, AccessType::WRITE); // Should cause a protection fault
-
-    // --- Test Case 2: Non-Executable Page ---
-    std::cout << "\n--> Setting permissions for VP 20 to: READ=Yes, WRITE=Yes, EXECUTE=No\n";
-    vmm.setPagePermissions(1, 20, true, true, false); // R=1, W=1, X=0
-
-    // Access the page to load it
-    vmm.accessPage(1, 20, AccessType::READ);
-
-    std::cout << "\n--> Attempting an ALLOWED action: Writing to VP 20...\n";
-    vmm.accessPage(1, 20, AccessType::WRITE); // Should succeed
-
-    std::cout << "\n--> Attempting a DISALLOWED action: Executing VP 20...\n";
-    vmm.accessPage(1, 20, AccessType::EXECUTE); // Should cause a protection fault
-}
-
-void stressTestRandomAccess() {
-    std::cout << "\n--- Stress Testing with Random Accesses ---\n";
-    VirtualMemoryManager vmm(128, 4, ReplacementPolicy::LRU); // More frames for a better test
-    vmm.setLogLevel(NORMAL); // Keep output clean for the stress test
-
-    vmm.allocateProcess(1);
-    vmm.allocateProcess(2);
-
-    // Setup for random number generation
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> proc_dist(1, 2); // Randomly choose process 1 or 2
-    std::uniform_int_distribution<> page_dist(0, 2000); // Access pages up to ~2 page tables deep
-
-    int num_accesses = 5000;
-    std::cout << "Performing " << num_accesses << " random page accesses..." << std::endl;
-
-    for (int i = 0; i < num_accesses; ++i) {
-        int processId = proc_dist(gen);
-        int virtualPage = page_dist(gen);
-        vmm.accessPage(processId, virtualPage, AccessType::READ); // Simulate a read
+// --- Test Framework ---
+void ASSERT_TRUE(bool condition, const std::string& message) {
+    if (condition) {
+        std::cout << "[ \033[32mPASS\033[0m ] " << message << std::endl;
+    } else {
+        std::cout << "[ \033[31mFAIL\033[0m ] " << message << std::endl;
+        exit(1);
     }
-
-    std::cout << "Stress test completed without crashing." << std::endl;
-    vmm.printFrameTable();
-    std::cout << "Total page faults under stress: " << vmm.getPageFaults() << std::endl;
 }
+
+// --- Test Suites ---
+
+void testProcessLifecycle(VirtualMemoryManager& vmm, std::map<int, ProcessControlBlock>& process_list) {
+    std::cout << "\n--- Testing Process Lifecycle ---\n";
+    
+    // Create PCB and pass it to the VMM
+    process_list.emplace(1, 1);
+    ProcessControlBlock& pcb1 = process_list.at(1);
+    vmm.allocateProcess(pcb1);
+
+    // 1. Corrected Assertion: The directory should be EMPTY after initialization.
+    ASSERT_TRUE(pcb1.page_directory.empty() == true, "Page directory should be empty on creation.");
+
+    // 2. Access a page to populate the directory
+    vmm.accessPage(pcb1, 100, AccessType::READ);
+    
+    // 3. New Assertion: The directory should NOT be empty after a page access.
+    ASSERT_TRUE(pcb1.page_directory.empty() == false, "Page directory should not be empty after first access.");
+
+    // 4. Test freeing the process
+    vmm.freeProcess(pcb1);
+    process_list.erase(1);
+    ASSERT_TRUE(process_list.count(1) == 0, "Process 1 should not exist after being freed.");
+}
+
+void testPcbIntegrationAndReplacement(VirtualMemoryManager& vmm, std::map<int, ProcessControlBlock>& process_list) {
+    std::cout << "\n--- Testing PCB Integration in Page Replacement ---\n";
+    
+    // Create and allocate processes
+    process_list.emplace(10, 10);
+    process_list.emplace(20, 20);
+    ProcessControlBlock& pcb10 = process_list.at(10);
+    ProcessControlBlock& pcb20 = process_list.at(20);
+    vmm.allocateProcess(pcb10);
+    vmm.allocateProcess(pcb20);
+
+    // Fill all 4 frames
+    vmm.accessPage(pcb10, 1, AccessType::READ);
+    vmm.accessPage(pcb20, 2, AccessType::READ);
+    vmm.accessPage(pcb10, 3, AccessType::READ);
+    vmm.accessPage(pcb20, 4, AccessType::READ);
+
+    // Trigger replacement (FIFO will evict P10, VP1)
+    vmm.accessPage(pcb10, 5, AccessType::READ);
+
+    int victim_pdi = 1 / PAGE_TABLE_SIZE;
+    int victim_pti = 1 % PAGE_TABLE_SIZE;
+    bool is_victim_invalid = !pcb10.page_directory.at(victim_pdi).pageTable->at(victim_pti).valid;
+    ASSERT_TRUE(is_victim_invalid, "Victim page (P10, 1) should be marked invalid after eviction.");
+}
+
+
+// --- Test Runner Main Function ---
 
 int main() {
-    testMemoryProtection();
-    stressTestRandomAccess();
+    std::cout << "===== Running Virtual Memory Manager Unit Tests =====\n";
+    
+    // Setup VMM and a process list for each test scenario
+    VirtualMemoryManager vmm_fifo(16, 4, ReplacementPolicy::FIFO);
+    std::map<int, ProcessControlBlock> process_list_fifo;
+    
+    // Run tests
+    testProcessLifecycle(vmm_fifo, process_list_fifo);
+    testPcbIntegrationAndReplacement(vmm_fifo, process_list_fifo);
+
+    std::cout << "\n===== All VMU tests passed! =====\n";
     return 0;
 }

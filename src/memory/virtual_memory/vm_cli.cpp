@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <utility>
+#include <map>
 
 using namespace std;
 
@@ -19,7 +20,6 @@ void runVirtualMemoryCLI()
     cout << "1. FIFO (First-In, First-Out)\n";
     cout << "2. LRU (Least Recently Used)\n";
     cout << "3. Clock (Second-Chance)\n";
-    cout << "4. Optimal (Run a predefined benchmark simulation)\n";
     cout << "Choice: ";
     cin >> policyChoice;
 
@@ -34,39 +34,11 @@ void runVirtualMemoryCLI()
         case 3:
             policy = ReplacementPolicy::CLOCK;
             break;
-        case 4:
-            policy = ReplacementPolicy::OPTIMAL;
-            break;
         default:
             cout << "Invalid policy choice. Exiting.\n";
             return;
     }
-    // Special handling for the Optimal policy
-    if (policy == ReplacementPolicy::OPTIMAL) {
-        cout << "\n--- Running Predefined Optimal Simulation --- \n";
-        VirtualMemoryManager vmm(memorySize, pageSize, policy);
-
-        vmm.allocateProcess(1); // Process 1 has pages 0-4
-        vmm.allocateProcess(2); // Process 2 has pages 0-3
-
-        // Format: {processId, virtualPageNumber}
-        vector<pair<int, int>> referenceString = {
-            {1, 0}, {2, 0}, {1, 1}, {2, 1}, {1, 2}, {2, 2},
-            {1, 3}, {1, 4}, {2, 3}, {1, 1}, {2, 0}, {1, 2}
-        };
-
-        cout << "Using reference string: ";
-        for(const auto& p : referenceString) {
-            cout << "P" << p.first << ":" << p.second << " ";
-        }
-        cout << "\n";
-
-        
-        vmm.runOptimalSimulation(referenceString);
-        
-        cout << "\nOptimal simulation finished.\n";
-        return; // Exit after the one-shot simulation
-    }
+    
 
     // instance for interactive policies
     VirtualMemoryManager vmm(memorySize, pageSize, policy);
@@ -90,7 +62,7 @@ void runVirtualMemoryCLI()
             vmm.setLogLevel(NORMAL);
             break;
     }
-
+    map<int,ProcessControlBlock> process_list;
 
     cout << "\nStarting interactive session...\n";
 
@@ -116,33 +88,69 @@ void runVirtualMemoryCLI()
             int pid;
             cout << "Enter Process ID: ";
             cin >> pid;
-            vmm.allocateProcess(pid);
+            if(process_list.count(pid)){
+                cout << "Error: Process " << pid << " already exists.\n";
+            }
+            else{
+                process_list.emplace(pid,pid);
+                ProcessControlBlock& new_pcb = process_list.at(pid);
+                vmm.allocateProcess(new_pcb);
+            }
+            
             break;
         }
 
-        case 2:
+        case 2: // Access Page
         {
             int pid, vpn;
-            cout << "Enter Process ID: ";
-            cin >> pid;
-            cout << "Enter Virtual Page Number to Access: ";
-            cin >> vpn;
-            vmm.accessPage(pid, vpn);
+            AccessType access_type;
+            int type_choice;
+
+            cout << "Enter Process ID: "; cin >> pid;
+            cout << "Enter Virtual Page Number: "; cin >> vpn;
+            cout << "Enter Access Type (1=READ, 2=WRITE, 3=EXECUTE): "; cin >> type_choice;
+            
+            switch(type_choice) {
+                case 2: access_type = AccessType::WRITE; break;
+                case 3: access_type = AccessType::EXECUTE; break;
+                default: access_type = AccessType::READ; break;
+            }
+
+            if (process_list.count(pid)) {
+                vmm.accessPage(process_list.at(pid), vpn, access_type);
+            } else {
+                cout << "Error: Process " << pid << " not found.\n";
+            }
             break;
         }
 
-        case 3:
+        case 3: // Free Process
         {
             int pid;
-            cout << "Enter Process ID to free: ";
-            cin >> pid;
-            vmm.freeProcess(pid);
+            cout << "Enter Process ID to free: "; cin >> pid;
+            if (process_list.count(pid)) {
+                // Pass the PCB to the VMM to free its memory
+                vmm.freeProcess(process_list.at(pid));
+                // Then remove the process from our list
+                process_list.erase(pid);
+                cout << "Process " << pid << " has been freed.\n";
+            } else {
+                cout << "Error: Process " << pid << " not found.\n";
+            }
             break;
         }
 
-        case 4:
-            vmm.printPageTable();
+        case 4: // Print Page Table
+        {
+            int pid;
+            cout << "Enter Process ID to view its page table: "; cin >> pid;
+            if (process_list.count(pid)) {
+                vmm.printPageTable(process_list.at(pid));
+            } else {
+                cout << "Error: Process " << pid << " not found.\n";
+            }
             break;
+        }
 
         case 5:
             vmm.printFrameTable();

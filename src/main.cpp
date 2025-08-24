@@ -3,6 +3,7 @@
 #include "memory/memory.hpp"
 #include "paging/paging.hpp"
 #include "memory/virtual_memory/virtual_memory.hpp"
+void runVirtualMemoryCLI();
 
 using namespace std;
 
