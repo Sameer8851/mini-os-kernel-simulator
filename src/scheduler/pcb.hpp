@@ -15,10 +15,12 @@ struct ProcessControlBlock {
     int process_id;
     ProcessState state;
     PageDirectory page_directory; 
+    int remaining_burst_time;
 
-    ProcessControlBlock(int id) : 
+    ProcessControlBlock(int id,int burst_time) : 
         process_id(id), 
-        state(ProcessState::NEW) 
+        state(ProcessState::NEW),
+        remaining_burst_time(burst_time) 
     {}
 };
 

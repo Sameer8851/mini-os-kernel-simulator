@@ -1,20 +1,19 @@
-// This is a header guard
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
-using namespace std;
 
+#include <queue>
+#include "pcb.hpp"
 
-#include <string>
+class Scheduler {
+public:
+    Scheduler(int time_quantum);
 
-struct Process
-{
-    string name;
-    int burstTime;
-    int remainingTime;
+    void addProcess(ProcessControlBlock* pcb);
+    void run();
+
+private:
+    int time_quantum;
+    std::queue<ProcessControlBlock*> ready_queue;
 };
-
-void runScheduler(); //Declaration of the function that runs our Round-Robin scheduling logic.
-
-//closes the header guard
 
 #endif
