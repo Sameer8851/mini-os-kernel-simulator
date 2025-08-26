@@ -4,16 +4,31 @@
 #include <queue>
 #include "pcb.hpp"
 
+
+enum class SchedulingPolicy {
+    ROUND_ROBIN,
+    PRIORITY,
+    SJF
+};
+
+
 class Scheduler {
 public:
-    Scheduler(int time_quantum);
+    Scheduler(SchedulingPolicy policy,int time_quantum = 4);
 
     void addProcess(ProcessControlBlock* pcb);
     void run();
 
 private:
+    void runRoundRobin();
+    void runPriority();
+    void runSJF();
+
+    SchedulingPolicy policy;
     int time_quantum;
-    std::queue<ProcessControlBlock*> ready_queue;
+    std::vector<ProcessControlBlock*> ready_queue;
 };
+
+
 
 #endif

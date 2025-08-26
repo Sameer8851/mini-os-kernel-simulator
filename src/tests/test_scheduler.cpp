@@ -2,26 +2,70 @@
 #include <iostream>
 #include <vector>
 
+// --- Test Suites ---
+
+void testRoundRobin() {
+    std::cout << "\n=============================================\n";
+    std::cout << "  Testing Scheduler: Round Robin (Quantum=4)\n";
+    std::cout << "=============================================\n";
+
+    Scheduler scheduler(SchedulingPolicy::ROUND_ROBIN, 4);
+
+    ProcessControlBlock p1(1, 10, 0); // ID=1, Burst=10
+    ProcessControlBlock p2(2, 7, 0);  // ID=2, Burst=7
+    ProcessControlBlock p3(3, 4, 0);  // ID=3, Burst=4
+
+    scheduler.addProcess(&p1);
+    scheduler.addProcess(&p2);
+    scheduler.addProcess(&p3);
+    scheduler.run();
+}
+
+void testPriority() {
+    std::cout << "\n=============================================\n";
+    std::cout << "  Testing Scheduler: Priority (Non-Preemptive)\n";
+    std::cout << "=============================================\n";
+
+    Scheduler scheduler(SchedulingPolicy::PRIORITY);
+
+    // Note: Lower number = higher priority
+    ProcessControlBlock p1(1, 10, 2); // ID=1, Burst=10, Prio=2
+    ProcessControlBlock p2(2, 7, 1);  // ID=2, Burst=7,  Prio=1 (Highest)
+    ProcessControlBlock p3(3, 4, 3);  // ID=3, Burst=4,  Prio=3
+
+    scheduler.addProcess(&p1);
+    scheduler.addProcess(&p2);
+    scheduler.addProcess(&p3);
+    scheduler.run(); // Should run in order: P2 -> P1 -> P3
+}
+
+void testSJF() {
+    std::cout << "\n=============================================\n";
+    std::cout << "  Testing Scheduler: SJF (Non-Preemptive)\n";
+    std::cout << "=============================================\n";
+
+    Scheduler scheduler(SchedulingPolicy::SJF);
+
+    ProcessControlBlock p1(1, 10, 0); // ID=1, Burst=10
+    ProcessControlBlock p2(2, 7, 0);  // ID=2, Burst=7
+    ProcessControlBlock p3(3, 4, 0);  // ID=3, Burst=4 (Shortest)
+
+    scheduler.addProcess(&p1);
+    scheduler.addProcess(&p2);
+    scheduler.addProcess(&p3);
+    scheduler.run(); // Should run in order: P3 -> P2 -> P1
+}
+
+
+// --- Test Runner Main Function ---
+
 int main() {
-    std::cout << "===== Running Scheduler Test (Round Robin) =====\n";
+    std::cout << "===== Running All Scheduler Tests =====\n";
+    
+    testRoundRobin();
+    testPriority();
+    testSJF();
 
-    // 1. Initialize the scheduler with a time quantum of 4
-    Scheduler rr_scheduler(4);
-
-    // 2. Create some processes (PCBs)
-    // In a real OS, these would be managed by a Process Manager
-    ProcessControlBlock p1(1, 10); // Process 1, burst time = 10
-    ProcessControlBlock p2(2, 7);  // Process 2, burst time = 7
-    ProcessControlBlock p3(3, 4);  // Process 3, burst time = 4
-
-    // 3. Add processes to the scheduler's ready queue
-    rr_scheduler.addProcess(&p1);
-    rr_scheduler.addProcess(&p2);
-    rr_scheduler.addProcess(&p3);
-
-    // 4. Run the scheduler
-    rr_scheduler.run();
-
-    std::cout << "\n===== Scheduler Test Completed =====\n";
+    std::cout << "\n===== All Scheduler Tests Completed =====\n";
     return 0;
 }
