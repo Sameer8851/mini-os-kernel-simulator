@@ -3,6 +3,7 @@
 
 #include <queue>
 #include "pcb.hpp"
+#include <vector>
 
 
 enum class SchedulingPolicy {
@@ -23,6 +24,7 @@ private:
     void runRoundRobin();
     void runPriority();
     void runSJF();
+    std::vector<ProcessControlBlock*> waiting_queue;
 
     SchedulingPolicy policy;
     int time_quantum;

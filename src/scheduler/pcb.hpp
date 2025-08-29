@@ -18,11 +18,19 @@ struct ProcessControlBlock {
     int remaining_burst_time;
     int priority;
 
-    ProcessControlBlock(int id,int burst_time,int prio) : 
+    // I/O properties
+    int io_burst_time;
+    int io_burst_frequency;
+    int time_since_last_io;
+
+    ProcessControlBlock(int id,int burst_time,int prio,int io_time = 0,int io_freq = 0) : 
         process_id(id), 
         state(ProcessState::NEW),
         remaining_burst_time(burst_time),
-        priority(prio)
+        priority(prio),
+        io_burst_time(io_time),
+        io_burst_frequency(io_freq),
+        time_since_last_io(0)
     {}
 };
 
