@@ -18,7 +18,7 @@ public:
     Scheduler(SchedulingPolicy policy,int time_quantum = 4);
 
     void addProcess(ProcessControlBlock* pcb);
-    void run();
+    void run(int num_steps = -1);
 
 private:
     void runRoundRobin();

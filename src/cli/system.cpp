@@ -28,7 +28,7 @@ void System::runCLI(){
             std::cout << "Available Commands:\n"
                       << "  create <burst> <prio> [io_time] [io_freq] - Create a new process.\n"
                       << "  access <pid> <vpn> <type>                 - Access memory (type: READ, WRITE, EXECUTE).\n"
-                      << "  run                                       - Run the CPU scheduler.\n"
+                      << "  run [steps]                               - Run the CPU scheduler.\n"
                       << "  ps                                        - Show process list.\n"
                       << "  mem <pid>                                 - Show page table for a process.\n"
                       << "  stats                                     - Show system statistics.\n"
@@ -51,7 +51,18 @@ void System::runCLI(){
             if (type_str == "EXECUTE") type = AccessType::EXECUTE;
             accessMemory(pid,vpn,type);
         } else if(command == "run"){
-            scheduler.run();
+            int num_steps = -1; //Default to run until competion
+            iss >> num_steps;
+
+            if(num_steps > 0){
+                cout << "Running scheduler for " << num_steps << " steps...\n";
+                scheduler.run(num_steps);
+            } else {
+                cout << "Running scheduler until all processes complete...\n";
+                scheduler.run();
+            }
+
+
         } else if(command == "ps"){
             cout << "Process list functionality coming soon.\n";
         } else if(command == "mem"){
