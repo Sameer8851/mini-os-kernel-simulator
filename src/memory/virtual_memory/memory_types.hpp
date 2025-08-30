@@ -3,7 +3,16 @@
 
 #include <unordered_map>
 
-// All memory-related type definitions now live in this one file.
+struct PageTableEntry; // Forward declaration
+using PageTable = std::unordered_map<int, PageTableEntry>;
+
+struct PageDirectoryEntry {
+    PageTable* pageTable;
+    bool valid;
+    PageDirectoryEntry() : pageTable(nullptr), valid(false) {}
+};
+
+using PageDirectory = std::unordered_map<int, PageDirectoryEntry>;
 
 struct PageTableEntry {
     int frameNumber;
@@ -15,15 +24,5 @@ struct PageTableEntry {
     PageTableEntry() : frameNumber(-1), valid(false), referenced(false), lastAccessTime(0),
                        can_read(false), can_write(false), can_execute(false) {}
 };
-
-using PageTable = std::unordered_map<int, PageTableEntry>;
-
-struct PageDirectoryEntry {
-    PageTable* pageTable;
-    bool valid;
-    PageDirectoryEntry() : pageTable(nullptr), valid(false) {}
-};
-
-using PageDirectory = std::unordered_map<int, PageDirectoryEntry>;
 
 #endif

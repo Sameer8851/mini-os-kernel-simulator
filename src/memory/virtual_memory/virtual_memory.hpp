@@ -7,11 +7,11 @@
 #include <queue>
 #include "scheduler/pcb.hpp"
 #include "memory/virtual_memory/memory_types.hpp"
+#include "core/types.hpp"
 
 // --- Enums ---
 enum class ReplacementPolicy { FIFO, LRU, CLOCK };
-enum class AccessType { READ, WRITE, EXECUTE };
-enum LogLevel { NORMAL, VERBOSE, DEBUG };
+
 
 const int PAGE_TABLE_SIZE = 1024;
 
