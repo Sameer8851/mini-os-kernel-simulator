@@ -3,7 +3,10 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iomanip>
 using namespace std;
+
+
 
 System::System() :
     mmu(128,4,ReplacementPolicy::LRU),
@@ -64,7 +67,7 @@ void System::runCLI(){
 
 
         } else if(command == "ps"){
-            cout << "Process list functionality coming soon.\n";
+            showProcessList();
         } else if(command == "mem"){
             int pid = 0;
             iss >> pid;
@@ -113,4 +116,36 @@ void System::showStats() {
     std::cout << "--- System Statistics ---\n";
     std::cout << "Total Page Faults: " << mmu.getPageFaults() << "\n";
     mmu.printFrameTable();
+}
+
+string processStateToString(ProcessState state) {
+    switch (state) {
+        case ProcessState::NEW: return "NEW";
+        case ProcessState::READY: return "READY";
+        case ProcessState::RUNNING: return "RUNNING";
+        case ProcessState::WAITING: return "WAITING";
+        case ProcessState::TERMINATED: return "TERMINATED";
+        default: return "UNKNOWN";
+    }
+}
+void System::showProcessList() {
+    std::cout << "--- Process List ---\n";
+    std::cout << std::left << std::setw(5) << "PID" 
+              << std::setw(12) << "State" 
+              << std::setw(10) << "Burst"
+              << std::setw(10) << "Priority" << "\n";
+    std::cout << "-------------------------------------\n";
+    
+    if (process_table.empty()) {
+        std::cout << "(No processes)\n";
+        return;
+    }
+    
+    for (const auto& pair : process_table) {
+        const ProcessControlBlock& pcb = pair.second;
+        std::cout << std::left << std::setw(5) << pcb.process_id
+                  << std::setw(12) << processStateToString(pcb.state)
+                  << std::setw(10) << pcb.remaining_burst_time
+                  << std::setw(10) << pcb.priority << "\n";
+    }
 }

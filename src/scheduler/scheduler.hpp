@@ -2,9 +2,11 @@
 #define SCHEDULER_HPP
 
 #include <queue>
-#include "pcb.hpp"
+#include <string>
 #include <vector>
-
+#include "pcb.hpp"
+#include "memory/virtual_memory/virtual_memory.hpp" 
+enum LogLevel;
 
 enum class SchedulingPolicy {
     ROUND_ROBIN,
@@ -20,6 +22,8 @@ public:
     void addProcess(ProcessControlBlock* pcb);
     void run(int num_steps = -1);
 
+    void setLogLevel(LogLevel level);
+
 private:
     void runRoundRobin();
     void runPriority();
@@ -29,6 +33,10 @@ private:
     SchedulingPolicy policy;
     int time_quantum;
     std::vector<ProcessControlBlock*> ready_queue;
+
+    LogLevel current_log_level;
+    void log(LogLevel level, const std::string& message);
+
 };
 
 

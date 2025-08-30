@@ -1,24 +1,43 @@
 #include "scheduler.hpp"
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <limits>
+#include "../memory/virtual_memory/virtual_memory.hpp"
 using namespace std;
 
 Scheduler::Scheduler(SchedulingPolicy policy, int time_quantum) 
-    : policy(policy), time_quantum(time_quantum) 
+    : policy(policy), time_quantum(time_quantum), current_log_level(NORMAL) 
 {
-    cout << "Scheduler initialized for policy: " 
-              << (policy == SchedulingPolicy::ROUND_ROBIN ? "Round Robin" :
-                 (policy == SchedulingPolicy::PRIORITY ? "Priority" : "SJF"))
-              << "\n";
+    std::string policy_name;
+    switch (policy) {
+        case SchedulingPolicy::ROUND_ROBIN: policy_name = "Round Robin"; break;
+        case SchedulingPolicy::PRIORITY: policy_name = "Priority"; break;
+        case SchedulingPolicy::SJF: policy_name = "SJF"; break;
+    }
+    log(NORMAL, "Scheduler initialized for policy: " + policy_name);
 }
 
+void Scheduler::setLogLevel(LogLevel level) {
+    current_log_level = level;
+}
+
+void Scheduler::log(LogLevel level, const std::string& message) {
+    if (current_log_level >= level) {
+        std::cout << message << std::endl;
+    }
+}
+
+
+// --- ADD PROCESS ---
 void Scheduler::addProcess(ProcessControlBlock* pcb) {
     pcb->state = ProcessState::READY;
     ready_queue.push_back(pcb);
-    cout << "Process " << pcb->process_id << " added to the ready queue.\n";
+    log(VERBOSE, "Process " + std::to_string(pcb->process_id) + " added to the ready queue.");
 }
 
+
+// --- RUN METHOD --
 void Scheduler::run(int num_steps) {
     cout << "\n--- Starting Scheduler ---\n";
     int current_time = 0;
@@ -28,9 +47,8 @@ void Scheduler::run(int num_steps) {
 
     // Main simulation loop: runs as long as there are processes to manage
     while (true) {
-
         if(num_steps != -1 && steps_taken >= num_steps){
-            cout << "--- Scheduler paused after " << steps_taken << "steps. ---\n";
+            log(NORMAL, "--- Scheduler paused after " + std::to_string(steps_taken) + " steps. ---");
             break;
         }
         
@@ -42,9 +60,9 @@ void Scheduler::run(int num_steps) {
                 pcb->state = ProcessState::READY;
                 ready_queue.push_back(pcb);
                 waiting_queue.erase(waiting_queue.begin() + i);
-                cout << "Time " << current_time << ": P" << pcb->process_id << " finished I/O, moved to ready.\n";
+                log(VERBOSE, "Time " + std::to_string(current_time) + ": P" + std::to_string(pcb->process_id) + " finished I/O, moved to ready.");
             } else {
-                ++i;
+                i++;
             }
         }
 
@@ -53,18 +71,18 @@ void Scheduler::run(int num_steps) {
             bool should_stop = false;
             if (current_process->remaining_burst_time <= 0) { // Process finished
                 current_process->state = ProcessState::TERMINATED;
-                cout << "Time " << current_time << ": P" << current_process->process_id << " finished.\n";
+                log(VERBOSE, "Time " + std::to_string(current_time) + ": P" + std::to_string(current_process->process_id) + " finished.");
                 should_stop = true;
             } else if (current_process->io_burst_frequency > 0 && current_process->time_since_last_io >= current_process->io_burst_frequency) { // Process needs I/O
                 current_process->state = ProcessState::WAITING;
                 current_process->time_since_last_io = 0;
                 waiting_queue.push_back(current_process);
-                cout << "Time " << current_time << ": P" << current_process->process_id << " moved to waiting for I/O.\n";
+                log(VERBOSE, "Time " + std::to_string(current_time) + ": P" + std::to_string(current_process->process_id) + " moved to waiting for I/O.");
                 should_stop = true;
             } else if (policy == SchedulingPolicy::ROUND_ROBIN && time_in_quantum >= time_quantum) { // Quantum expired for RR
                 current_process->state = ProcessState::READY;
                 ready_queue.push_back(current_process);
-                cout << "Time " << current_time << ": P" << current_process->process_id << " preempted (quantum expired).\n";
+                log(VERBOSE, "Time " + std::to_string(current_time) + ": P" + std::to_string(current_process->process_id) + " preempted (quantum expired).");
                 should_stop = true;
             }
 
@@ -95,17 +113,21 @@ void Scheduler::run(int num_steps) {
 
         // 4. If a process is running, simulate one time unit of work
         if (current_process != nullptr) {
-            cout << "Time " << current_time << ": Running P" << current_process->process_id << ".\n";
+            std::stringstream ss;
+            ss << "Time " << current_time << ": Running P" << current_process->process_id << ". "
+               << "(CPU Burst left: " << current_process->remaining_burst_time << ")";
+            log(DEBUG, ss.str());
+
             current_process->remaining_burst_time--;
             current_process->time_since_last_io++;
             time_in_quantum++;
         } else {
-            cout << "Time " << current_time << ": CPU is idle.\n";
+            log(DEBUG, "Time " + std::to_string(current_time) + ": CPU is idle.");
         }
 
         // 5. Check if the simulation is complete
         if (ready_queue.empty() && waiting_queue.empty() && current_process == nullptr) {
-            cout << "--- Scheduler finished. All processes complete. ---\n";
+            log(NORMAL, "--- Scheduler finished. All processes complete. ---");
             break; // Exit the main loop
         }
         
