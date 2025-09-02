@@ -1,11 +1,12 @@
 #ifndef SYSTEM_HPP
 #define SYSTEM_HPP
 
-
+#include <map>
 #include <string>
 #include "memory/virtual_memory/virtual_memory.hpp"
 #include "scheduler/scheduler.hpp"
-#include <map>
+#include "core/mutex.hpp"
+
 
 
 std::string processStateToString(ProcessState state);
@@ -42,6 +43,15 @@ class System{
         void showStats();
         void showProcessList();
         void setSystemLogLevel(LogLevel level);
+        void lockSharedResource(int pid);
+        void unlockSharedResource(int pid);
+
+        // --- Concurrency Simulation ---
+        Mutex shared_resource_mutex;
+        int shared_resource_value;
+
+
+        
 };
 
 #endif

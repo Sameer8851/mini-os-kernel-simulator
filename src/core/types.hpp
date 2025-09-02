@@ -18,6 +18,7 @@ enum class ProcessState {
     READY,
     RUNNING,
     WAITING,
+    BLOCKED_ON_MUTEX,
     TERMINATED
 };
 

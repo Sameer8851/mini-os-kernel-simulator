@@ -9,7 +9,8 @@ System::System() : mmu(128, 4, ReplacementPolicy::LRU),
                    next_pid(1),
                    total_processes_created(0),
                    total_turnaround_time(0),
-                   finished_process_count(0)
+                   finished_process_count(0),
+                   shared_resource_value(0)
 {
     cout << "System initialized.\n";
 }
@@ -30,14 +31,16 @@ void System::runCLI()
         if (command == "help")
         {
             std::cout << "Available Commands:\n"
-                      << "  loglevel <level>                           - Set system log level (0=NORMAL, 1=VERBOSE, 2=DEBUG).\n"
-                      << "  create <burst> <prio> [io_time] [io_freq]  - Create a new process.\n"
-                      << "  access <pid> <vpn> <type>                  - Access memory (type: READ, WRITE, EXECUTE).\n"
-                      << "  run [steps]                                - Run the CPU scheduler.\n"
-                      << "  ps                                         - Show process list.\n"
-                      << "  mem <pid>                                  - Show page table for a process.\n"
-                      << "  stats                                      - Show system statistics.\n"
-                      << "  exit                                       - Exit the simulator.\n";
+                      << "  create <burst> <prio> [io_time] [io_freq] - Create a new process.\n"
+                      << "  access <pid> <vpn> <type>                 - Access memory (type: READ, WRITE, EXECUTE).\n"
+                      << "  lock <pid>                                - Process attempts to lock the shared resource.\n"
+                      << "  unlock <pid>                              - Process attempts to unlock the shared resource.\n"
+                      << "  run [steps]                               - Run the CPU scheduler.\n"
+                      << "  ps                                        - Show process list.\n"
+                      << "  mem <pid>                                 - Show page table for a process.\n"
+                      << "  stats                                     - Show system statistics.\n"
+                      << "  loglevel <level>                          - Set log level (0=NORMAL, 1=VERBOSE, 2=DEBUG).\n"
+                      << "  exit                                      - Exit the simulator.\n";
         }
         else if (command == "create")
         {
@@ -63,6 +66,22 @@ void System::runCLI()
             if (type_str == "EXECUTE")
                 type = AccessType::EXECUTE;
             accessMemory(pid, vpn, type);
+        } else if(command == "lock"){
+            int pid = 0;
+            iss >> pid;
+            if (pid > 0) {
+                lockSharedResource(pid);
+            } else {
+                std::cout << "Usage: lock <pid>\n";
+            }
+        } else if(command == "unlock"){
+            int pid = 0;
+            iss >> pid;
+            if (pid > 0) {
+                unlockSharedResource(pid);
+            } else {
+                std::cout << "Usage: unlock <pid>\n";
+            }
         }
         else if (command == "run")
         {
@@ -133,6 +152,9 @@ void System::createProcess(int burst, int priority, int io_time, int io_freq)
     new_pcb.creation_time = system_time;
     // 2. Initialize its memory with the MMU
     mmu.allocateProcess(new_pcb);
+
+    // update the state
+    new_pcb.state = ProcessState::READY;
 
     // 3. Add it to the scheduler's ready queue
     ready_queue.push_back(&new_pcb);
@@ -215,6 +237,8 @@ string processStateToString(ProcessState state)
         return "RUNNING";
     case ProcessState::WAITING:
         return "WAITING";
+    case ProcessState::BLOCKED_ON_MUTEX:
+        return "BLOCKED";
     case ProcessState::TERMINATED:
         return "TERMINATED";
     default:
@@ -250,4 +274,40 @@ void System::setLogLevel(LogLevel level) {
     mmu.setLogLevel(level);
     scheduler.setLogLevel(level);
     std::cout << "System log level set.\n";
+}
+
+void System::lockSharedResource(int pid) {
+    if (!process_table.count(pid)) {
+        std::cout << "Error: Process " << pid << " not found.\n"; return;
+    }
+    ProcessControlBlock* pcb = &process_table.at(pid);
+    std::cout << "P" << pid << " is attempting to lock the mutex...\n";
+    if (shared_resource_mutex.lock(pcb)) {
+        std::cout << "P" << pid << " acquired the lock.\n";
+    } else {
+        std::cout << "P" << pid << " failed to acquire lock and is now BLOCKED.\n";
+        // Remove from ready queue
+        for (size_t i = 0; i < ready_queue.size(); ++i) {
+            if (ready_queue[i] == pcb) {
+                ready_queue.erase(ready_queue.begin() + i);
+                break;
+            }
+        }
+    }
+}
+
+void System::unlockSharedResource(int pid) {
+    if (!process_table.count(pid)) {
+        std::cout << "Error: Process " << pid << " not found.\n"; return;
+    }
+    ProcessControlBlock* pcb = &process_table.at(pid);
+    std::cout << "P" << pid << " is attempting to unlock the mutex...\n";
+    ProcessControlBlock* unblocked_pcb = shared_resource_mutex.unlock(pcb);
+
+    if (unblocked_pcb != nullptr) {
+        ready_queue.push_back(unblocked_pcb);
+        std::cout << "P" << pid << " unlocked the mutex. P" << unblocked_pcb->process_id << " was unblocked and moved to the ready queue.\n";
+    } else {
+        std::cout << "P" << pid << " unlocked the mutex. No processes were waiting.\n";
+    }
 }

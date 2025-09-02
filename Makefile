@@ -8,7 +8,8 @@ TEST_DIR = src/tests
 APP_SRCS = $(SRC_DIR)/main.cpp \
            $(SRC_DIR)/cli/system.cpp \
            $(SRC_DIR)/scheduler/scheduler.cpp \
-           $(SRC_DIR)/memory/virtual_memory/virtual_memory.cpp
+           $(SRC_DIR)/memory/virtual_memory/virtual_memory.cpp \
+		   $(SRC_DIR)/core/mutex.cpp
 
 # --- Source Files for Tests ---
 VM_TEST_SRCS = $(SRC_DIR)/memory/virtual_memory/virtual_memory.cpp $(TEST_DIR)/vmt.cpp
