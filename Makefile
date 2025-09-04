@@ -14,6 +14,7 @@ APP_SRCS = $(SRC_DIR)/main.cpp \
 # --- Source Files for Tests ---
 VM_TEST_SRCS = $(SRC_DIR)/memory/virtual_memory/virtual_memory.cpp $(TEST_DIR)/vmt.cpp
 SCHED_TEST_SRCS = $(SRC_DIR)/scheduler/scheduler.cpp $(TEST_DIR)/test_scheduler.cpp
+FS_TEST_SRCS = $(SRC_DIR)/filesystem/filesystem.cpp $(TEST_DIR)/test_filesystem.cpp
 
 # --- Build Rules ---
 all: build/main
@@ -30,6 +31,10 @@ build/test_scheduler:
 	mkdir -p $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $(SCHED_TEST_SRCS)
 
+build/test_fs:
+	mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(FS_TEST_SRCS)
+
 # --- Run Rules ---
 run: build/main
 	./$(BUILD_DIR)/main
@@ -39,6 +44,9 @@ test_vm: build/test_vm
 
 test_scheduler: build/test_scheduler
 	./$(BUILD_DIR)/test_scheduler
+
+test_fs: build/test_fs
+	./build/test_fs
 
 # --- Utility ---
 clean:
