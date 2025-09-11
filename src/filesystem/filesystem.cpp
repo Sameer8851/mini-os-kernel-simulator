@@ -152,3 +152,34 @@ std::string FileSystem::read(int inode_number) {
     return data;
 }
 
+void FileSystem::remove(const std::string& filename){
+    // 1. Find the file in the root directory
+    if(root_directory.find(filename) == root_directory.end()){
+        log(NORMAL, "Error: Cannot remove file '" + filename + "', not found.");
+        return;
+    }
+    int inode_number = root_directory.at(filename);
+
+    // 2. Get the inode
+    if(inode_table.find(inode_number) == inode_table.end()){
+        log(NORMAL, "Error: Inode " + std::to_string(inode_number) + " is corrupted or missing.");
+        return;
+    }
+    const Inode& inode = inode_table.at(inode_number);
+
+    // 3. Free up all the data blocks used by the file
+    for(int block_index : inode.data_block_indices){
+        if(block_index >= 0 && block_index < free_block_bitmap.size()){
+            free_block_bitmap[block_index] = false;
+        }
+    }
+
+    // 4. Remove the inode from the inode table
+    inode_table.erase(inode_number);
+
+    // 5. Remove the file's entry from the root directory
+    root_directory.erase(filename);
+
+    log(VERBOSE, "Removed file '" + filename + "' and freed its resources.");
+}
+

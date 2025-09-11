@@ -20,6 +20,9 @@ class FileSystem {
         std::string read(int inode_number);
         void remove(const std::string& filename);
 
+        const std::map<std::string, int>& getRootDirectory() const { return root_directory; }
+        const std::map<int, Inode>& getInodeTable() const { return inode_table; }
+
     private:
         std::vector<DataBlock> disk;
         std::vector<bool> free_block_bitmap;
