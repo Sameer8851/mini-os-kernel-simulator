@@ -3,6 +3,7 @@
 #include <queue>
 #include <climits>
 #include <sstream>
+#include <iomanip>
 
 using namespace std;
 
@@ -288,5 +289,41 @@ void VirtualMemoryManager::printFrameTable() const
                  << "\t" << frameTable[i].second << "\n";
         }
     }
+}
+
+void VirtualMemoryManager::displayMemoryLayout() const {
+    const int frames_per_row = 8;
+    std::cout << "\n--- Physical Memory Layout ---\n";
+
+    for (int i = 0; i < totalFrames; ++i) {
+        // Top border of the box
+        std::cout << "+--------";
+    }
+    std::cout << "+\n";
+
+    for (int i = 0; i < totalFrames; ++i) {
+        // Content of the box
+        if (frameTable[i].first != nullptr) {
+            // Occupied frame (print in red)
+            std::cout << "|\033[31m P" << std::setw(2) << frameTable[i].first->process_id
+                      << ":V" << std::setw(2) << frameTable[i].second << "\033[0m ";
+        } else {
+            // Free frame (print in green)
+            std::cout << "|\033[32m  Free  \033[0m ";
+        }
+    }
+    std::cout << "|\n";
+
+    for (int i = 0; i < totalFrames; ++i) {
+        // Frame number
+        std::cout << "| Frame " << std::setw(2) << i << " ";
+    }
+    std::cout << "|\n";
+
+    for (int i = 0; i < totalFrames; ++i) {
+        // Bottom border of the box
+        std::cout << "+--------";
+    }
+    std::cout << "+\n";
 }
 

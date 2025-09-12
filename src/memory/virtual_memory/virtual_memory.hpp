@@ -27,6 +27,7 @@ public:
     void printFrameTable() const;
     int getPageFaults() const { return pageFaults; }
     void setLogLevel(LogLevel level);
+    void displayMemoryLayout() const;
     
     // Helpers for testing
     const std::vector<std::pair<ProcessControlBlock*, int>>& getFrameTable() const { return frameTable; }

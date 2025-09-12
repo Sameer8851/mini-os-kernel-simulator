@@ -38,6 +38,7 @@ void System::runCLI()
                       << "  run [steps]                               - Run the CPU scheduler.\n"
                       << "  ps                                        - Show process list.\n"
                       << "  mem <pid>                                 - Show page table for a process.\n"
+                      << "  memmap                                    - Display the physical memory layout.\n"
                       << "  stats                                     - Show system statistics.\n"
                       << "  loglevel <level>                          - Set log level (0=NORMAL, 1=VERBOSE, 2=DEBUG).\n"
                       << "  exit                                      - Exit the simulator.\n";
@@ -115,6 +116,8 @@ void System::runCLI()
             {
                 cout << "Process " << pid << " not found.\n";
             }
+        }else if(command == "memmap"){
+            mmu.displayMemoryLayout();
         }
         else if (command == "stats")
         {
