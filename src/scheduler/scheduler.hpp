@@ -26,6 +26,8 @@ public:
 
     void setLogLevel(LogLevel level);
 
+    void displayQueues(const std::vector<ProcessControlBlock*>& ready_queue,const std::vector<ProcessControlBlock*>& waiting_queue) const;
+
 private:
     
     SchedulingPolicy policy;

@@ -7,6 +7,7 @@ using namespace std;
 System::System() : mmu(128, 4, ReplacementPolicy::LRU),
                    scheduler(SchedulingPolicy::ROUND_ROBIN, 4),
                    next_pid(1),
+                   system_time(0),
                    total_processes_created(0),
                    total_turnaround_time(0),
                    finished_process_count(0),
@@ -39,6 +40,7 @@ void System::runCLI()
                       << "  ps                                        - Show process list.\n"
                       << "  mem <pid>                                 - Show page table for a process.\n"
                       << "  memmap                                    - Display the physical memory layout.\n"
+                      << "  queues                                    - Display the scheduler ready and waiting queues.\n"
                       << "  stats                                     - Show system statistics.\n"
                       << "  loglevel <level>                          - Set log level (0=NORMAL, 1=VERBOSE, 2=DEBUG).\n"
                       << "  exit                                      - Exit the simulator.\n";
@@ -118,6 +120,8 @@ void System::runCLI()
             }
         }else if(command == "memmap"){
             mmu.displayMemoryLayout();
+        }else if(command == "queues"){
+            scheduler.displayQueues(ready_queue,waiting_queue);
         }
         else if (command == "stats")
         {

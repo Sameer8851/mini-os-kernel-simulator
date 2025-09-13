@@ -3,6 +3,7 @@
 #include <sstream>
 #include <algorithm>
 #include <limits>
+#include <iomanip>
 #include "../memory/virtual_memory/virtual_memory.hpp"
 using namespace std;
 
@@ -142,4 +143,34 @@ void Scheduler::run(std::vector<ProcessControlBlock*>& ready_queue,
         system_time++;
         steps_taken++;
     }
+}
+
+
+
+void Scheduler::displayQueues(const std::vector<ProcessControlBlock*>& ready_queue, 
+                              const std::vector<ProcessControlBlock*>& waiting_queue) const {
+    
+    std::cout << "\n--- Scheduler Queues ---\n";
+
+    // --- Print Ready Queue ---
+    std::cout << std::setw(12) << std::left << "Ready Queue:" << "[ ";
+    if (ready_queue.empty()) {
+        std::cout << "(empty) ";
+    } else {
+        for (const auto* pcb : ready_queue) {
+            std::cout << "P" << pcb->process_id << " ";
+        }
+    }
+    std::cout << "]\n";
+
+    // --- Print Waiting Queue ---
+    std::cout << std::setw(12) << std::left << "Waiting Queue:" << "[ ";
+    if (waiting_queue.empty()) {
+        std::cout << "(empty) ";
+    } else {
+        for (const auto* pcb : waiting_queue) {
+            std::cout << "P" << pcb->process_id << " ";
+        }
+    }
+    std::cout << "]\n";
 }
