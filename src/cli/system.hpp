@@ -18,6 +18,14 @@ class System{
         void runCLI();
 
         void setLogLevel(LogLevel level);
+
+        const std::vector<ProcessControlBlock*>& getReadyQueue() const { return ready_queue; }
+        const std::vector<ProcessControlBlock*>& getWaitingQueue() const { return waiting_queue; }
+        const VirtualMemoryManager& getMMU() const { return mmu; }
+        void runCLICommand(const std::string& command);
+        void setSystemLogLevel(LogLevel level);
+
+        friend const std::map<int, ProcessControlBlock>& getProcessTable(const System& sys);
     private:
         // --- Core OS Components ---
         VirtualMemoryManager mmu;
@@ -42,7 +50,7 @@ class System{
         void accessMemory(int pid,int vpn , AccessType type);
         void showStats();
         void showProcessList();
-        void setSystemLogLevel(LogLevel level);
+        
         void lockSharedResource(int pid);
         void unlockSharedResource(int pid);
 

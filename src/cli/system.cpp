@@ -318,3 +318,21 @@ void System::unlockSharedResource(int pid) {
         std::cout << "P" << pid << " unlocked the mutex. No processes were waiting.\n";
     }
 }
+
+// Add this new function to system.cpp
+void System::runCLICommand(const std::string& command_line) {
+    std::string command;
+    std::istringstream iss(command_line);
+    iss >> command;
+
+    if (command == "run") {
+        int num_steps = -1;
+        iss >> num_steps;
+        scheduler.run(ready_queue, waiting_queue, system_time, num_steps);
+    }
+    // This can be expanded to handle other commands in tests if needed
+}
+
+const std::map<int, ProcessControlBlock>& getProcessTable(const System& sys) {
+    return sys.process_table;
+}
